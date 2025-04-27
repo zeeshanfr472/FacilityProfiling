@@ -28,10 +28,10 @@ app = dash.Dash(
 app.title = "Facility Checklist Dashboard"
 
 # More robust catch-all route handling
-@app.server.route('/dashboard/', defaults={'path': ''})
-@app.server.route('/dashboard/<path:path>')
-def catch_all(path):
-    return app.index_string
+# @app.server.route('/dashboard/', defaults={'path': ''})
+# @app.server.route('/dashboard/<path:path>')
+# def catch_all(path):
+#     return app.index_string
 
 # Define field help text dictionary
 field_help = {
