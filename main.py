@@ -224,9 +224,9 @@ def delete_inspection_endpoint(
 # This lets your Dash SPA handle all routes under /dashboard/
 
 # @app.get("/dashboard/{full_path:path}", response_class=HTMLResponse)
-@app.get("/dashboard", response_class=HTMLResponse)
-def dash_catch_all(full_path: str = ""):
-    return HTMLResponse(dash_app.index_string)
+# @app.get("/dashboard", response_class=HTMLResponse)
+# def dash_catch_all(full_path: str = ""):
+#     return HTMLResponse(dash_app.index_string)
 
 app.mount("/dashboard", WSGIMiddleware(dash_app.server))
 
