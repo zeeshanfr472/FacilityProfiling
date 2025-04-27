@@ -14,22 +14,22 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-load_dotenv()
+# ENV vars
+DATABASE_URL = os.getenv("DATABASE_URL", "your_neon_postgres_url")
+SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# === DATABASE SETUP ===
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-# Add sslmode for Neon/Render
-if DATABASE_URL and "sslmode" not in DATABASE_URL:
-    if "?" in DATABASE_URL:
-        DATABASE_URL += "&sslmode=require"
-    else:
-        DATABASE_URL += "?sslmode=require"
-
+# SQLAlchemy setup
 engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth2
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # MODELS
 
@@ -239,6 +239,3 @@ def delete_inspection(inspection_id: int, db: Session = Depends(get_db), current
     db.delete(db_inspection)
     db.commit()
     return {"ok": True}
-
-# --- Optional: Create tables if not exists (useful for dev, comment for prod) ---
-# Base.metadata.create_all(bind=engine)
