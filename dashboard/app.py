@@ -1197,43 +1197,46 @@ def close_help_modal(n_clicks, is_open):
     [Input('url', 'pathname')]
 )
 def display_page(pathname):
-    # Strip the "/dashboard" prefix from pathname for internal routing if present
-    # This helps handle both direct URL access and in-app navigation
-    if pathname and pathname.startswith('/dashboard'):
-        pathname = pathname[10:]  # Remove '/dashboard'
+    # Handle pathname correctly to avoid URL errors
+    if pathname is None:
+        pathname = '/'
+        
+    # Strip the "/dashboard" prefix if present, but be careful with slashes
+    if pathname.startswith('/dashboard'):
+        clean_path = pathname[10:]  # Remove '/dashboard'
+        if not clean_path:
+            clean_path = '/'
+    else:
+        clean_path = pathname
     
-    if pathname == '/login' or pathname == '/' or pathname == '':
+    # Use the cleaned path for routing logic
+    if clean_path == '/login' or clean_path == '/' or clean_path == '':
         return login_layout
-    elif pathname == '/register':
+    elif clean_path == '/register':
         return register_layout
-    elif pathname == '/dashboard' or pathname == '':
+    elif clean_path == '/dashboard' or clean_path == '':
         return dashboard_layout
-    elif pathname == '/add-inspection':
-        # Set the dashboard content to the add inspection page
+    elif clean_path == '/add-inspection':
         return html.Div([
             dashboard_layout,
             html.Script("document.getElementById('dashboard-content').innerHTML = '';")
         ])
-    elif pathname == '/analytics':
-        # Set the dashboard content to the analytics page
+    elif clean_path == '/analytics':
         return html.Div([
             dashboard_layout,
             html.Script("document.getElementById('dashboard-content').innerHTML = '';")
         ])
-    elif pathname == '/logout':
-        # Clear token and redirect to login
+    elif clean_path == '/logout':
         return login_layout
-    elif pathname and pathname.startswith('/edit-inspection/'):
-        # Extract the row number from the URL
-        row_number = pathname.split('/')[-1]
-        # Return the dashboard layout with edit form
+    elif clean_path.startswith('/edit-inspection/'):
+        row_number = clean_path.split('/')[-1]
         return html.Div([
             dashboard_layout,
             html.Script("document.getElementById('dashboard-content').innerHTML = '';"),
             dcc.Store(id='edit-row-number', data=row_number)
         ])
     else:
-        # Display a nice 404 page
+        # 404 page
         return html.Div([
             html.H1("404 - Page Not Found", className="text-center my-5"),
             html.P("The page you're looking for doesn't exist or has been moved.", className="text-center"),
