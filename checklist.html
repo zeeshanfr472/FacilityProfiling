@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Facility Checklist Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        .pointer { cursor: pointer; }
+        .modal-header { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <h2>Facility Checklist Management</h2>
+    <button class="btn btn-primary my-3" data-bs-toggle="modal" data-bs-target="#checklistModal" onclick="openChecklistModal()">Add Checklist</button>
+    <table class="table table-bordered" id="checklistTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Function Location</th>
+                <th>Building Name</th>
+                <th>Facility Type</th>
+                <th>Proponent</th>
+                <th>Zone</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="checklistBody">
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal for Add/Edit Checklist -->
+<div class="modal fade" id="checklistModal" tabindex="-1" aria-labelledby="checklistModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form id="checklistForm" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="checklistModalLabel">Add/Edit Checklist</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body row g-3">
+                <!-- Example fields (expand as per your actual schema) -->
+                <input type="hidden" id="inspectionId">
+                <div class="col-md-6">
+                    <label for="function_location" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Enter the unique facility function location ID">Function Location ID</label>
+                    <input type="text" class="form-control" id="function_location" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="building_name" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Building's name">Building Name</label>
+                    <input type="text" class="form-control" id="building_name" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="facility_type" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Type of facility">Facility Type</label>
+                    <input type="text" class="form-control" id="facility_type">
+                </div>
+                <div class="col-md-6">
+                    <label for="proponent" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Name of the proponent">Proponent</label>
+                    <input type="text" class="form-control" id="proponent">
+                </div>
+                <div class="col-md-6">
+                    <label for="zone" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Facility zone">Zone</label>
+                    <input type="text" class="form-control" id="zone">
+                </div>
+                <div class="col-md-6">
+                    <label for="latitude" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Latitude (auto-detect or enter manually)">Latitude</label>
+                    <input type="text" class="form-control" id="latitude">
+                </div>
+                <div class="col-md-6">
+                    <label for="longitude" class="form-label pointer" data-bs-toggle="tooltip" data-bs-title="Longitude (auto-detect or enter manually)">Longitude</label>
+                    <input type="text" class="form-control" id="longitude">
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-info" onclick="getLocation()">Get Current Location</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-success">Save</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Your FastAPI backend URL
+    const API_URL = 'https://facilityprofilingupdated.onrender.com';
+
+    // Load all checklists on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChecklists();
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    function getToken() {
+        return localStorage.getItem('token');
+    }
+
+    function setFormFields(inspection = {}) {
+        document.getElementById('inspectionId').value = inspection.id || '';
+        document.getElementById('function_location').value = inspection.function_location || '';
+        document.getElementById('building_name').value = inspection.building_name || '';
+        document.getElementById('facility_type').value = inspection.facility_type || '';
+        document.getElementById('proponent').value = inspection.proponent || '';
+        document.getElementById('zone').value = inspection.zone || '';
+        document.getElementById('latitude').value = inspection.latitude || '';
+        document.getElementById('longitude').value = inspection.longitude || '';
+    }
+
+    function openChecklistModal(inspection = {}) {
+        setFormFields(inspection);
+        const modal = new bootstrap.Modal(document.getElementById('checklistModal'));
+        modal.show();
+    }
+
+    async function loadChecklists() {
+        const resp = await fetch(`${API_URL}/inspections`, {
+            headers: { "Authorization": `Bearer ${getToken()}` }
+        });
+        if (resp.ok) {
+            const checklists = await resp.json();
+            renderChecklistTable(checklists);
+        } else {
+            alert("Failed to load checklists. Please log in again.");
+        }
+    }
+
+    function renderChecklistTable(data) {
+        const tbody = document.getElementById('checklistBody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.id}</td>
+                <td>${item.function_location || ''}</td>
+                <td>${item.building_name || ''}</td>
+                <td>${item.facility_type || ''}</td>
+                <td>${item.proponent || ''}</td>
+                <td>${item.zone || ''}</td>
+                <td>${item.latitude || ''}</td>
+                <td>${item.longitude || ''}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick='editChecklist(${JSON.stringify(item)})'>Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteChecklist(${item.id})">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Edit checklist handler
+    function editChecklist(item) {
+        openChecklistModal(item);
+    }
+
+    // Save checklist (create/update)
+    document.getElementById('checklistForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const id = document.getElementById('inspectionId').value;
+        const data = {
+            function_location: document.getElementById('function_location').value,
+            building_name: document.getElementById('building_name').value,
+            facility_type: document.getElementById('facility_type').value,
+            proponent: document.getElementById('proponent').value,
+            zone: document.getElementById('zone').value,
+            latitude: document.getElementById('latitude').value,
+            longitude: document.getElementById('longitude').value
+        };
+
+        const url = id ? `${API_URL}/inspections/${id}` : `${API_URL}/inspections`;
+        const method = id ? 'PUT' : 'POST';
+
+        const resp = await fetch(url, {
+            method: method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${getToken()}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (resp.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('checklistModal')).hide();
+            loadChecklists();
+        } else {
+            alert("Failed to save checklist.");
+        }
+    });
+
+    // Delete checklist
+    async function deleteChecklist(id) {
+        if (!confirm("Are you sure you want to delete this checklist?")) return;
+        const resp = await fetch(`${API_URL}/inspections/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${getToken()}`
+            }
+        });
+        if (resp.ok) {
+            loadChecklists();
+        } else {
+            alert("Failed to delete.");
+        }
+    }
+
+    // Get location
+    function getLocation() {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition((pos) => {
+            document.getElementById('latitude').value = pos.coords.latitude;
+            document.getElementById('longitude').value = pos.coords.longitude;
+        }, () => {
+            alert('Unable to retrieve location');
+        });
+    }
+</script>
+</body>
+</html>
