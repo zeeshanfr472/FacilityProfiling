@@ -133,6 +133,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add a root redirect to the dashboard
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/dashboard")
+
+# Custom 404 handler to handle deep links and SPA routes
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc: HTTPException):
+    # If the path starts with /dashboard, serve the Dash app
+    if request.url.path.startswith("/dashboard"):
+        return HTMLResponse(content=dash_app.index_string)
+    
+    # For API routes that truly don't exist, return a 404 JSON response
+    if request.url.path.startswith("/api") or request.url.path.startswith("/inspection") or request.url.path.startswith("/login"):
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Not Found"}
+        )
+    
+    # For any other path, redirect to the dashboard
+    return RedirectResponse(url="/dashboard")
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
