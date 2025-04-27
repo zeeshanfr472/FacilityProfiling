@@ -5,19 +5,21 @@ import requests
 import json
 from datetime import datetime
 import pandas as pd
+import os
 from dash.exceptions import PreventUpdate
 from visualization import (create_condition_chart, create_facility_type_chart, 
                           create_inspection_status_chart, create_zone_map)
+API_BASE_URL = os.getenv("API_BASE_URL", "")
 
-# Define the API base URL
-API_BASE_URL = "http://127.0.0.1:8000"  # Adjust if your FastAPI is running on a different port
 
 # Initialize the Dash app with a Bootstrap theme
 app = dash.Dash(
     __name__, 
+     requests_pathname_prefix='/dashboard/',
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     suppress_callback_exceptions=True
 )
+server = app.server 
 
 # Define app title and metadata
 app.title = "Facility Checklist Dashboard"
