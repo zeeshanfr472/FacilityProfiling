@@ -34,8 +34,8 @@ pandas==2.2.3
 passlib==1.7.4
 plotly==6.0.1
 psycopg2-binary==2.9.10
-pyasn1==0.4.8
-pyasn1_modules==0.4.2
+# pyasn1==0.4.8        <-- REMOVED: conflicts with pyasn1-modules
+# pyasn1_modules==0.4.2 <-- REMOVED: let dependencies manage version
 pydantic==2.11.3
 pydantic_core==2.33.1
 python-dateutil==2.9.0.post0
