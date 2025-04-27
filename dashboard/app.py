@@ -1,3 +1,4 @@
+
 import dash
 from dash import dcc, html, Input, Output, State, callback, no_update, dash_table, ALL
 import dash_bootstrap_components as dbc
@@ -21,11 +22,13 @@ API_BASE_URL = os.getenv("API_BASE_URL", "")
 # This makes it flexible for both local development and deployment
 requests_pathname_prefix = os.getenv("DASH_PATHNAME_PREFIX", "/dashboard/")
 
+# First, configure the Dash app - critically, DON'T set a prefix here
+# as FastAPI is handling the mounting to /dashboard/
 app = dash.Dash(
     __name__, 
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     suppress_callback_exceptions=True,
-    requests_pathname_prefix=requests_pathname_prefix
+    # Do NOT include requests_pathname_prefix here
 )
 
 # Define app title and metadata
@@ -339,7 +342,7 @@ app.clientside_callback(
 )
 
 
-# Authentication Components
+# Fix in the login layout - update URL paths
 login_layout = html.Div([
     dbc.Container([
         html.H1("Facility Checklist - Login", className="text-center mt-5 mb-4"),
@@ -365,11 +368,12 @@ login_layout = html.Div([
         ], className="shadow-sm"),
         html.Div([
             html.P("Need an account?"),
-            dbc.Button("Register", id="goto-register-button", color="secondary", className="mt-1", href="/dashboard/register")
+            dbc.Button("Register", id="goto-register-button", color="secondary", className="mt-1", href="register")
         ], className="text-center mt-3")
     ], className="mt-5")
 ])
 
+# Fix in register layout - update URL paths
 register_layout = html.Div([
     dbc.Container([
         html.H1("Facility Checklist - Register", className="text-center mt-5 mb-4"),
@@ -396,7 +400,7 @@ register_layout = html.Div([
         ], className="shadow-sm"),
         html.Div([
             html.P("Already have an account?"),
-            dbc.Button("Login", id="goto-login-button", color="secondary", className="mt-1", href="/dashboard/login")
+            dbc.Button("Login", id="goto-login-button", color="secondary", className="mt-1", href="login")
         ], className="text-center mt-3")
     ], className="mt-5")
 ])
@@ -965,17 +969,17 @@ def build_inspection_form():
         html.Div(id="submit-status", className="mt-3")
     ])
 
-# Dashboard layout with navigation
+# Dashboard layout with navigation - fix URL paths
 dashboard_layout = html.Div([
     dbc.NavbarSimple(
         children=[
-            dbc.NavItem(dbc.NavLink("Dashboard", href="/dashboard", active="exact")),
-            dbc.NavItem(dbc.NavLink("Add Inspection", href="/dashboard/add-inspection")),
-            dbc.NavItem(dbc.NavLink("Analytics", href="/dashboard/analytics")),
-            dbc.NavItem(dbc.NavLink("Logout", href="/dashboard/logout", id="logout-button")),
+            dbc.NavItem(dbc.NavLink("Dashboard", href="", active="exact")),
+            dbc.NavItem(dbc.NavLink("Add Inspection", href="add-inspection")),
+            dbc.NavItem(dbc.NavLink("Analytics", href="analytics")),
+            dbc.NavItem(dbc.NavLink("Logout", href="logout", id="logout-button")),
         ],
         brand="Facility Checklist Dashboard",
-        brand_href="/dashboard",
+        brand_href="",
         color="primary",
         dark=True,
     ),
@@ -1193,44 +1197,39 @@ def close_help_modal(n_clicks, is_open):
         return False
     return is_open
 
-# URL routing callback
+# The key change in URL route handling
 @callback(
     Output('page-content', 'children'),
     Input('url', 'pathname')
 )
 def display_page(pathname):
-    # Handle different path prefixes consistently
-    if pathname is None:
-        pathname = '/dashboard'
+    # Remove any leading slash if present
+    if pathname and pathname.startswith('/'):
+        pathname = pathname[1:]
     
-    # Remove trailing slash for consistency
-    if pathname.endswith('/') and len(pathname) > 1:
-        pathname = pathname[:-1]
-    
-    # Handle root paths
-    if pathname == '/' or pathname == '':
-        return login_layout
-    
-    if pathname == '/dashboard':
+    # Handle root path (empty or just 'dashboard')
+    if not pathname or pathname == '':
         return dashboard_layout
-    elif pathname == '/dashboard/login':
+    
+    # Main page cases
+    if pathname == 'login':
         return login_layout
-    elif pathname == '/dashboard/register':
+    elif pathname == 'register':
         return register_layout
-    elif pathname == '/dashboard/add-inspection':
+    elif pathname == 'add-inspection':
         return html.Div([
             dashboard_layout,
             html.Script("document.getElementById('dashboard-content').innerHTML = '';")
         ])
-    elif pathname == '/dashboard/analytics':
+    elif pathname == 'analytics':
         return html.Div([
             dashboard_layout,
             html.Script("document.getElementById('dashboard-content').innerHTML = '';")
         ])
-    elif pathname == '/dashboard/logout':
+    elif pathname == 'logout':
         # Clear token and redirect to login
         return login_layout
-    elif pathname and pathname.startswith('/dashboard/edit-inspection/'):
+    elif pathname and pathname.startswith('edit-inspection/'):
         # Extract the row number from the URL
         row_number = pathname.split('/')[-1]
         # Return the dashboard layout with edit form
@@ -1239,12 +1238,10 @@ def display_page(pathname):
             html.Script("document.getElementById('dashboard-content').innerHTML = '';"),
             dcc.Store(id='edit-row-number', data=row_number)
         ])
+    # If no specific match, default to showing dashboard
     else:
-        return html.Div([
-            html.H1("404 Page Not Found", className="text-center my-5"),
-            html.P("The page you're looking for doesn't exist or has been moved.", className="text-center"),
-            dbc.Button("Return to Dashboard", href="/dashboard", color="primary", className="d-block mx-auto mt-4")
-        ])
+        return dashboard_layout
+
 
 # Set dashboard content based on URL
 @callback(
@@ -1434,7 +1431,7 @@ def handle_table_click(active_cell, data, token_data):
     
     raise PreventUpdate
 
-# Load inspections table
+# Fix all other URL references in table links
 @callback(
     Output('inspections-table-container', 'children'),
     [Input('inspection-data-store', 'data'),
@@ -1461,17 +1458,9 @@ def load_inspections_table(data, n_clicks, facility, area, status, start_date, e
         if status and status != "all":
             filtered_inspections = [i for i in filtered_inspections if i.get('full_inspection_completed') == status]
         if start_date:
-            # Assuming there's a created_date field - adjust if your data uses a different field
             filtered_inspections = [i for i in filtered_inspections if i.get('created_date', '') >= start_date]
         if end_date:
             filtered_inspections = [i for i in filtered_inspections if i.get('created_date', '') <= end_date]
-        
-        # Create a DataFrame for the table
-        df = pd.DataFrame(filtered_inspections)
-        
-        # Format the data for display
-        # Select columns to display
-        display_cols = ['function_location_id', 'building_name', 'facility_type', 'full_inspection_completed']
         
         # Create the table
         table = dash_table.DataTable(
@@ -1489,9 +1478,10 @@ def load_inspections_table(data, n_clicks, facility, area, status, start_date, e
                     "building_name": row.get('building_name', ''),
                     "facility_type": row.get('facility_type', ''),
                     "full_inspection_completed": row.get('full_inspection_completed', ''),
-                    "row_number": f"[Edit](/dashboard/edit-inspection/{row.get('id', '')}) | [Delete](#{row.get('id', '')})"
+                    # CRITICAL CHANGE: Use relative URLs (no leading slash)
+                    "row_number": f"[Edit](edit-inspection/{row.get('id', '')}) | [Delete](#{row.get('id', '')})"
                 }
-                for i, row in df.iterrows()
+                for i, row in pd.DataFrame(filtered_inspections).iterrows()
             ],
             style_table={'overflowX': 'auto'},
             style_cell={'textAlign': 'left', 'padding': '10px'},
