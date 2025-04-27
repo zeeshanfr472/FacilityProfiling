@@ -360,9 +360,9 @@ login_layout = html.Div([
             ])
         ], className="shadow-sm"),
         html.Div([
-            html.P("Need an account?"),
-            dbc.Button("Register", id="goto-register-button", color="secondary", className="mt-1", href="/register")
-        ], className="text-center mt-3")
+    html.P("Need an account?"),
+    dbc.Button("Register", id="goto-register-button", color="secondary", className="mt-1", href="/dashboard/register")
+], className="text-center mt-3")
     ], className="mt-5")
 ])
 
@@ -1473,7 +1473,7 @@ def load_inspections_table(data, n_clicks, facility, area, status, start_date, e
                     "building_name": row.get('building_name', ''),
                     "facility_type": row.get('facility_type', ''),
                     "full_inspection_completed": row.get('full_inspection_completed', ''),
-                    "row_number": f"[Edit](/edit-inspection/{row.get('row_number', '')})"
+                   "row_number": f"[Edit](/dashboard/edit-inspection/{row.get('row_number', '')}) | [Delete](#{row.get('row_number', '')})"
                 }
                 for i, row in df.iterrows()
             ],
@@ -1675,9 +1675,9 @@ def submit_inspection(n_clicks, token_data, *args):
             
             if response.status_code == 200:
                     return html.Div([
-                        html.P("Inspection submitted successfully!", className="text-success"),
-                        dbc.Button("View All Inspections", href="/dashboard", color="primary", className="mt-2")
-                    ]), False
+    html.P("Inspection submitted successfully!", className="text-success"),
+    dbc.Button("View All Inspections", href="/dashboard", color="primary", className="mt-2")
+]), False
             else:
                 error_msg = response.json().get("detail", "Failed to submit inspection.")
                 return html.Div(f"Error: {error_msg}", className="text-danger"), False
