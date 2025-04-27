@@ -1,0 +1,58 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment
+.env
+.env.*
+.venv/
+venv/
+env/
+ENV/
+*.env
+
+# Jupyter/IPython
+.ipynb_checkpoints
+
+# VS Code and IDEs
+.vscode/
+.idea/
+
+# OS and Misc
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Python egg and build artifacts
+*.egg-info/
+dist/
+build/
+
+# Pip
+pip-log.txt
+
+# SQLite
+*.sqlite3
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+
+# Test/output
+*.out
+*.pytest_cache/
+.cache/
+
+# Requirements lock (optional, if auto-generated)
+poetry.lock
+Pipfile.lock
+
+# Node modules (if you use JS components)
+node_modules/
+
+# Render/Deploy files (never ignore requirements.txt or app code)

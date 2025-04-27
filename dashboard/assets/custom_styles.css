@@ -1,0 +1,165 @@
+/* Custom styles for the facility checklist dashboard */
+
+/* Styling for help buttons */
+.help-button {
+    color: #6c757d;
+    cursor: pointer;
+    transition: color 0.2s;
+    font-size: 13px;
+    text-decoration: none;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 4px;
+}
+
+.help-button:hover {
+    color: #007bff;
+    background-color: #e9ecef;
+}
+
+/* Help modal styling */
+.markdown-content {
+    line-height: 1.6;
+}
+
+.markdown-content p {
+    margin-bottom: 1rem;
+}
+
+.markdown-content strong {
+    font-weight: 600;
+}
+
+.markdown-content ul {
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* Field label styling */
+.label-with-help {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+/* Modal header styling */
+.modal-title {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Main form styling improvements */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-section {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-section-title {
+    color: #343a40;
+    margin-bottom: 1.25rem;
+}
+
+/* Required field indicator */
+.required-field::after {
+    content: "*";
+    color: #dc3545;
+    margin-left: 4px;
+}
+
+/* Success/error message styling */
+.success-message {
+    padding: 10px 15px;
+    border-radius: 4px;
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.error-message {
+    padding: 10px 15px;
+    border-radius: 4px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+/* Table styling improvements */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.data-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.data-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Status indicators */
+.status-complete {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.status-incomplete {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-label {
+        margin-top: 0.75rem;
+    }
+    
+    .markdown-content {
+        font-size: 0.9rem;
+    }
+}
+
+/* Better checkbox and radio styling */
+.custom-control {
+    padding-left: 1.75rem;
+}
+
+.custom-control-label {
+    margin-bottom: 0;
+}
+
+/* Card styling */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
