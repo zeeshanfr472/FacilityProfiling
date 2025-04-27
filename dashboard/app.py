@@ -16,20 +16,19 @@ from dashboard.visualization import (
 API_BASE_URL = os.getenv("API_BASE_URL", "https://facilityprofilingupdated.onrender.com")
 
 
-# Initialize the Dash app with a Bootstrap theme
+# First, configure the Dash app to use /dashboard/ as the requests_pathname_prefix
 app = dash.Dash(
     __name__, 
-     requests_pathname_prefix='/dashboard/',
     external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True
+    suppress_callback_exceptions=True,
+    requests_pathname_prefix='/dashboard/'  # Add this line
 )
-server = app.server 
 
 # Define app title and metadata
 app.title = "Facility Checklist Dashboard"
 
 # Add catch-all route handler for client-side routing
-@app.server.route('/<path:path>')
+@app.server.route('/dashboard/<path:path>')
 def catch_all(path):
     return app.index_string
 
