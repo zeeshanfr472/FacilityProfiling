@@ -1,16 +1,18 @@
 import os
-from typing import Optional, List
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta, date
+from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.responses import RedirectResponse
-from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Text
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from jose import JWTError, jwt
+from sqlalchemy import (
+    create_engine, Column, Integer, String, Date, Float, DateTime, ARRAY
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
-from dotenv import load_dotenv
+from jose import JWTError, jwt
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -29,20 +31,16 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# === MODELS ===
+# MODELS
+
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    full_name = Column(String)
-    role = Column(String, default="inspector")
-    created_at = Column(Date, default=datetime.utcnow)
+    password_hash = Column(String, nullable=False)
 
 class Inspection(Base):
     __tablename__ = "inspections"
-
     id = Column(Integer, primary_key=True, index=True)
     function_location_id = Column(String)
     sap_function_location = Column(String)
@@ -54,107 +52,41 @@ class Inspection(Base):
     micro_area = Column(String)
     proponent = Column(String)
     zone = Column(String)
-    hvac_type = Column(String)
+    hvac_type = Column(ARRAY(String))
     sprinkler = Column(String)
     fire_alarm = Column(String)
-    power_source = Column(String)
+    power_source = Column(ARRAY(String))
     vcp_status = Column(String)
-    vcp_planned_date = Column(Date, nullable=True)
+    vcp_planned_date = Column(Date)
     smart_power_meter_status = Column(String)
     eifs = Column(String)
-    eifs_installed_year = Column(Integer, nullable=True)
+    eifs_installed_year = Column(Integer)
     exterior_cladding_condition = Column(String)
     interior_architectural_condition = Column(String)
     fire_protection_system_obsolete = Column(String)
-    hvac_condition = Column(Integer, nullable=True)
-    electrical_condition = Column(Integer, nullable=True)
+    hvac_condition = Column(Integer)
+    electrical_condition = Column(Integer)
     roofing_condition = Column(String)
     water_proofing_warranty = Column(String)
-    water_proofing_warranty_date = Column(Date, nullable=True)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
+    water_proofing_warranty_date = Column(Date)
+    latitude = Column(Float)
+    longitude = Column(Float)
     full_inspection_completed = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-# === APP & UTILS ===
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
-)
-
-SECRET_KEY = os.environ.get("SECRET_KEY", "supersecret")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def get_user(db: Session, username: str):
-    return db.query(User).filter(User.username == username).first()
-
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user(db, username)
-    if not user or not verify_password(password, user.hashed_password):
-        return False
-    return user
-
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    user = get_user(db, username)
-    if user is None:
-        raise credentials_exception
-    return user
-
-# === SCHEMAS (Pydantic) ===
-from pydantic import BaseModel
+# Pydantic schemas
 
 class UserCreate(BaseModel):
     username: str
     password: str
-    full_name: Optional[str] = ""
-    role: Optional[str] = "inspector"
 
-class UserOut(BaseModel):
+class UserResponse(BaseModel):
     id: int
     username: str
-    full_name: Optional[str]
-    role: Optional[str]
-    created_at: Optional[date]
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-class InspectionCreate(BaseModel):
+class InspectionBase(BaseModel):
     function_location_id: str
     sap_function_location: str
     building_name: str
@@ -165,50 +97,94 @@ class InspectionCreate(BaseModel):
     micro_area: str
     proponent: str
     zone: str
-    hvac_type: str
+    hvac_type: List[str]
     sprinkler: str
     fire_alarm: str
-    power_source: str
+    power_source: List[str]
     vcp_status: str
-    vcp_planned_date: Optional[date] = None
+    vcp_planned_date: Optional[date]
     smart_power_meter_status: str
     eifs: str
-    eifs_installed_year: Optional[int] = None
+    eifs_installed_year: Optional[int]
     exterior_cladding_condition: str
     interior_architectural_condition: str
     fire_protection_system_obsolete: str
-    hvac_condition: Optional[int] = None
-    electrical_condition: Optional[int] = None
+    hvac_condition: Optional[int]
+    electrical_condition: Optional[int]
     roofing_condition: str
     water_proofing_warranty: str
-    water_proofing_warranty_date: Optional[date] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    water_proofing_warranty_date: Optional[date]
+    latitude: Optional[float]
+    longitude: Optional[float]
     full_inspection_completed: str
 
-class InspectionOut(InspectionCreate):
+class InspectionCreate(InspectionBase):
+    pass
+
+class InspectionResponse(InspectionBase):
     id: int
+    created_at: datetime
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# === ENDPOINTS ===
+# UTILS
 
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/docs")
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
-@app.post("/register", response_model=UserOut)
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+# APP
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Make this stricter in production!
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.post("/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    hashed_password = get_password_hash(user.password)
-    new_user = User(
-        username=user.username,
-        hashed_password=hashed_password,
-        full_name=user.full_name,
-        role=user.role
-    )
+    hashed = get_password_hash(user.password)
+    new_user = User(username=user.username, password_hash=hashed)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -216,17 +192,15 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    user = db.query(User).filter(User.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/users/me", response_model=UserOut)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+# CRUD for inspections
 
-@app.post("/inspections", response_model=InspectionOut)
+@app.post("/inspections/", response_model=InspectionResponse)
 def create_inspection(inspection: InspectionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_inspection = Inspection(**inspection.dict())
     db.add(db_inspection)
@@ -234,24 +208,25 @@ def create_inspection(inspection: InspectionCreate, db: Session = Depends(get_db
     db.refresh(db_inspection)
     return db_inspection
 
-@app.get("/inspections", response_model=List[InspectionOut])
-def get_all_inspections(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Inspection).all()
+@app.get("/inspections/", response_model=List[InspectionResponse])
+def read_inspections(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    inspections = db.query(Inspection).offset(skip).limit(limit).all()
+    return inspections
 
-@app.get("/inspections/{inspection_id}", response_model=InspectionOut)
-def get_inspection(inspection_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.get("/inspections/{inspection_id}", response_model=InspectionResponse)
+def read_inspection(inspection_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     inspection = db.query(Inspection).filter(Inspection.id == inspection_id).first()
-    if not inspection:
+    if inspection is None:
         raise HTTPException(status_code=404, detail="Inspection not found")
     return inspection
 
-@app.put("/inspections/{inspection_id}", response_model=InspectionOut)
+@app.put("/inspections/{inspection_id}", response_model=InspectionResponse)
 def update_inspection(inspection_id: int, inspection: InspectionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_inspection = db.query(Inspection).filter(Inspection.id == inspection_id).first()
-    if not db_inspection:
+    if db_inspection is None:
         raise HTTPException(status_code=404, detail="Inspection not found")
-    for key, value in inspection.dict().items():
-        setattr(db_inspection, key, value)
+    for field, value in inspection.dict().items():
+        setattr(db_inspection, field, value)
     db.commit()
     db.refresh(db_inspection)
     return db_inspection
@@ -259,11 +234,11 @@ def update_inspection(inspection_id: int, inspection: InspectionCreate, db: Sess
 @app.delete("/inspections/{inspection_id}")
 def delete_inspection(inspection_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_inspection = db.query(Inspection).filter(Inspection.id == inspection_id).first()
-    if not db_inspection:
+    if db_inspection is None:
         raise HTTPException(status_code=404, detail="Inspection not found")
     db.delete(db_inspection)
     db.commit()
-    return {"ok": True, "deleted_id": inspection_id}
+    return {"ok": True}
 
 # --- Optional: Create tables if not exists (useful for dev, comment for prod) ---
 # Base.metadata.create_all(bind=engine)
