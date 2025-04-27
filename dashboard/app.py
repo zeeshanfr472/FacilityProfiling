@@ -1197,14 +1197,16 @@ def close_help_modal(n_clicks, is_open):
     [Input('url', 'pathname')]
 )
 def display_page(pathname):
-    # Check local storage for token
-    # This is a client-side callback, so we can't directly check the token's validity
+    # Strip the "/dashboard" prefix from pathname for internal routing if present
+    # This helps handle both direct URL access and in-app navigation
+    if pathname and pathname.startswith('/dashboard'):
+        pathname = pathname[10:]  # Remove '/dashboard'
     
-    if pathname == '/login' or pathname == '/':
+    if pathname == '/login' or pathname == '/' or pathname == '':
         return login_layout
     elif pathname == '/register':
         return register_layout
-    elif pathname == '/dashboard':
+    elif pathname == '/dashboard' or pathname == '':
         return dashboard_layout
     elif pathname == '/add-inspection':
         # Set the dashboard content to the add inspection page
@@ -1231,8 +1233,12 @@ def display_page(pathname):
             dcc.Store(id='edit-row-number', data=row_number)
         ])
     else:
-        return html.H1("404 Page Not Found")
-
+        # Display a nice 404 page
+        return html.Div([
+            html.H1("404 - Page Not Found", className="text-center my-5"),
+            html.P("The page you're looking for doesn't exist or has been moved.", className="text-center"),
+            dbc.Button("Return to Dashboard", href="/dashboard", color="primary", className="d-block mx-auto mt-4")
+        ])
 # Set dashboard content based on URL
 @callback(
     Output('dashboard-content', 'children'),
