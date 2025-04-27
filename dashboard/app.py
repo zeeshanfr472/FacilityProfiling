@@ -13,7 +13,7 @@ from dashboard.visualization import (
     create_inspection_status_chart,
     create_zone_map,
 )
-API_BASE_URL = os.getenv("API_BASE_URL", "")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://facilityprofilingupdated.onrender.com")
 
 
 # Initialize the Dash app with a Bootstrap theme
