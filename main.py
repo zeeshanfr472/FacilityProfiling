@@ -1,6 +1,8 @@
 import os
 from datetime import datetime, timedelta, date
 from typing import List, Optional
+from fastapi.staticfiles import StaticFiles
+import os
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -239,3 +241,7 @@ def delete_inspection(inspection_id: int, db: Session = Depends(get_db), current
     db.delete(db_inspection)
     db.commit()
     return {"ok": True}
+
+
+# This mounts everything in /static at the root URL
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
