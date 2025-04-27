@@ -1246,23 +1246,6 @@ def display_page(pathname):
         ])
 
 
-# Set dashboard content based on URL
-@callback(
-    Output('dashboard-content', 'children'),
-    [Input('url', 'pathname')]
-)
-def set_dashboard_content(pathname):
-    if pathname == '/dashboard':
-        return dashboard_home
-    elif pathname == '/add-inspection':
-        return add_inspection_page
-    elif pathname == '/analytics':
-        return analytics_page
-    elif pathname and pathname.startswith('/edit-inspection/'):
-        return edit_inspection_page
-    else:
-        return html.Div()  # Empty div for other routes
-
 # Login callback
 @callback(
     [Output('login-error', 'children'),
