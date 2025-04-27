@@ -131,7 +131,8 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/dashboard")
+    # Instead of redirecting to dashboard, serve it directly
+    return RedirectResponse(url="/dashboard/")
 
 @app.get("/health")
 def health_check():
@@ -220,19 +221,16 @@ def delete_inspection_endpoint(
         raise HTTPException(status_code=500, detail="Failed to delete inspection")
     return {"status": "deleted", "id": inspection_id}
 
+# Mount the Dash app at the exact path with trailing slash
+# This is important to prevent redirect loops
+app.mount("/dashboard/", WSGIMiddleware(dash_app.server))
 
-# Set up WSGI middleware to mount the Dash app at the /dashboard path
-app.mount("/dashboard", WSGIMiddleware(dash_app.server))
-
-# Add a catch-all route to handle all routes not explicitly defined
+# Final catch-all for any undefined routes
 @app.get("/{path:path}")
 async def catch_all(path: str):
-    # If the path starts with 'dashboard', redirect to the Dash app
-    if path.startswith("dashboard"):
-        return RedirectResponse(url=f"/{path}")
-    # Otherwise, redirect to the root which will then redirect to dashboard
+    # For paths starting with dashboard but missing the trailing slash,
+    # redirect to the version with trailing slash
+    if path == "dashboard":
+        return RedirectResponse(url="/dashboard/")
+    # Otherwise, redirect to home which will redirect to dashboard
     return RedirectResponse(url="/")
-
-# ========================
-# END OF main.py
-# ========================
