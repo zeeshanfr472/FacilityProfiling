@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from starlette.middleware.wsgi import WSGIMiddleware
 from dashboard.app import app as dash_app
+from dashboard.app import app as app_dash
 
 # Add these lines at the top of your main.py file
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -357,5 +358,12 @@ def delete_inspection_endpoint(
         print("DATABASE ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-# Mount Dash at /dashboard
+
+# Mount Dash at /dashboard BEFORE the catch-all route
 app.mount("/dashboard", WSGIMiddleware(dash_app.server))
+
+# Place the catch-all after mounting
+@app.get("/dashboard/{full_path:path}")
+async def dash_spa_catch_all(full_path: str):
+    # Serve the Dash frontend's index page for any /dashboard/* route
+    return HTMLResponse(app_dash.index_string)
