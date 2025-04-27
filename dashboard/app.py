@@ -28,6 +28,11 @@ server = app.server
 # Define app title and metadata
 app.title = "Facility Checklist Dashboard"
 
+# Add catch-all route handler for client-side routing
+@app.server.route('/<path:path>')
+def catch_all(path):
+    return app.index_string
+
 # Define field help text dictionary
 field_help = {
     "hvac-type": {
