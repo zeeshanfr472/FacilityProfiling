@@ -1194,54 +1194,58 @@ def close_help_modal(n_clicks, is_open):
 # URL routing callback
 @callback(
     Output('page-content', 'children'),
-    [Input('url', 'pathname')]
+    Input('url', 'pathname')
 )
 def display_page(pathname):
-    # Handle pathname correctly to avoid URL errors
+    # Normalize the pathname to always start with "/dashboard"
+    # Remove trailing slash for consistency
     if pathname is None:
-        pathname = '/'
-        
-    # Strip the "/dashboard" prefix if present, but be careful with slashes
-    if pathname.startswith('/dashboard'):
-        clean_path = pathname[10:]  # Remove '/dashboard'
-        if not clean_path:
-            clean_path = '/'
-    else:
-        clean_path = pathname
-    
-    # Use the cleaned path for routing logic
-    if clean_path == '/login' or clean_path == '/' or clean_path == '':
-        return login_layout
-    elif clean_path == '/register':
-        return register_layout
-    elif clean_path == '/dashboard' or clean_path == '':
-        return dashboard_layout
-    elif clean_path == '/add-inspection':
+        pathname = '/dashboard'
+    if pathname.endswith('/') and len(pathname) > 1:
+        pathname = pathname[:-1]
+
+    # Dashboard Home
+    if pathname == '/dashboard':
+        return html.Div([dashboard_layout, dashboard_home])
+
+    # Add Inspection Page
+    elif pathname == '/dashboard/add-inspection':
+        return html.Div([dashboard_layout, add_inspection_page])
+
+    # Analytics Page
+    elif pathname == '/dashboard/analytics':
+        return html.Div([dashboard_layout, analytics_page])
+
+    # Edit Inspection Page
+    elif pathname.startswith('/dashboard/edit-inspection/'):
+        row_number = pathname.split('/')[-1]
         return html.Div([
             dashboard_layout,
-            html.Script("document.getElementById('dashboard-content').innerHTML = '';")
-        ])
-    elif clean_path == '/analytics':
-        return html.Div([
-            dashboard_layout,
-            html.Script("document.getElementById('dashboard-content').innerHTML = '';")
-        ])
-    elif clean_path == '/logout':
-        return login_layout
-    elif clean_path.startswith('/edit-inspection/'):
-        row_number = clean_path.split('/')[-1]
-        return html.Div([
-            dashboard_layout,
-            html.Script("document.getElementById('dashboard-content').innerHTML = '';"),
+            edit_inspection_page,
             dcc.Store(id='edit-row-number', data=row_number)
         ])
+
+    # Logout (return to login page)
+    elif pathname == '/dashboard/logout':
+        return login_layout
+
+    # Login Page (also for "/" root)
+    elif pathname == '/dashboard/login' or pathname == '/' or pathname == "":
+        return login_layout
+
+    # Registration Page
+    elif pathname == '/dashboard/register':
+        return register_layout
+
+    # Unknown route: 404 Page
     else:
-        # 404 page
         return html.Div([
             html.H1("404 - Page Not Found", className="text-center my-5"),
             html.P("The page you're looking for doesn't exist or has been moved.", className="text-center"),
             dbc.Button("Return to Dashboard", href="/dashboard", color="primary", className="d-block mx-auto mt-4")
         ])
+
+
 # Set dashboard content based on URL
 @callback(
     Output('dashboard-content', 'children'),
