@@ -391,9 +391,9 @@ register_layout = html.Div([
             ])
         ], className="shadow-sm"),
         html.Div([
-            html.P("Already have an account?"),
-            dbc.Button("Login", id="goto-login-button", color="secondary", className="mt-1", href="/login")
-        ], className="text-center mt-3")
+    html.P("Already have an account?"),
+    dbc.Button("Login", id="goto-login-button", color="secondary", className="mt-1", href="/dashboard/login")
+], className="text-center mt-3")
     ], className="mt-5")
 ])
 
