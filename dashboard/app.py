@@ -27,7 +27,8 @@ app = dash.Dash(
 # Define app title and metadata
 app.title = "Facility Checklist Dashboard"
 
-# Add catch-all route handler for client-side routing
+# More robust catch-all route handling
+@app.server.route('/dashboard/', defaults={'path': ''})
 @app.server.route('/dashboard/<path:path>')
 def catch_all(path):
     return app.index_string
