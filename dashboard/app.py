@@ -966,9 +966,9 @@ dashboard_layout = html.Div([
     dbc.NavbarSimple(
         children=[
             dbc.NavItem(dbc.NavLink("Dashboard", href="/dashboard", active="exact")),
-            dbc.NavItem(dbc.NavLink("Add Inspection", href="/add-inspection")),
-            dbc.NavItem(dbc.NavLink("Analytics", href="/analytics")),
-            dbc.NavItem(dbc.NavLink("Logout", href="/logout", id="logout-button")),
+            dbc.NavItem(dbc.NavLink("Add Inspection", href="/dashboard/add-inspection")),
+            dbc.NavItem(dbc.NavLink("Analytics", href="/dashboard/analytics")),
+            dbc.NavItem(dbc.NavLink("Logout", href="/dashboard/logout", id="logout-button")),
         ],
         brand="Facility Checklist Dashboard",
         brand_href="/dashboard",
