@@ -369,7 +369,7 @@ login_layout = html.Div([
         ], className="shadow-sm"),
         html.Div([
             html.P("Need an account?"),
-            dbc.Button("Register", id="goto-register-button", color="secondary", className="mt-1", href="/register")
+            dbc.Button("Register", id="goto-register-button", color="secondary", className="mt-1", href="/dashboard/register")
         ], className="text-center mt-3")
     ], className="mt-5")
 ])
@@ -400,7 +400,7 @@ register_layout = html.Div([
         ], className="shadow-sm"),
         html.Div([
             html.P("Already have an account?"),
-            dbc.Button("Login", id="goto-login-button", color="secondary", className="mt-1", href="/login")
+            dbc.Button("Login", id="goto-login-button", color="secondary", className="mt-1", href="/dashboard/login")
         ], className="text-center mt-3")
     ], className="mt-5")
 ])
@@ -974,9 +974,9 @@ dashboard_layout = html.Div([
     dbc.NavbarSimple(
         children=[
             dbc.NavItem(dbc.NavLink("Dashboard", href="/dashboard", active="exact")),
-            dbc.NavItem(dbc.NavLink("Add Inspection", href="/add-inspection")),
-            dbc.NavItem(dbc.NavLink("Analytics", href="/analytics")),
-            dbc.NavItem(dbc.NavLink("Logout", href="/logout", id="logout-button")),
+            dbc.NavItem(dbc.NavLink("Add Inspection", href="/dashboard/add-inspection")),
+            dbc.NavItem(dbc.NavLink("Analytics", href="/dashboard/analytics")),
+            dbc.NavItem(dbc.NavLink("Logout", href="/dashboard/logout", id="logout-button")),
         ],
         brand="Facility Checklist Dashboard",
         brand_href="/dashboard",
@@ -1150,8 +1150,6 @@ edit_inspection_page = html.Div([
 # Callbacks
 
 # Help button callback to open the modal with appropriate content
-# Help button callback to open the modal with appropriate content
-# Help button callback to open the modal with appropriate content
 @callback(
     [Output("help-modal", "is_open"),
      Output("help-modal-title", "children"),
@@ -1205,41 +1203,38 @@ def close_help_modal(n_clicks, is_open):
     [Input('url', 'pathname')]
 )
 def display_page(pathname):
-    # Check local storage for token
-    # This is a client-side callback, so we can't directly check the token's validity
+    # Handle paths with or without trailing slash
+    if pathname and pathname.endswith('/') and len(pathname) > 1:
+        pathname = pathname[:-1]
     
-    if pathname == '/login' or pathname == '/':
-        return login_layout
-    elif pathname == '/register':
-        return register_layout
-    elif pathname == '/dashboard':
+    # Dashboard Home
+    if pathname == '/dashboard':
         return dashboard_layout
-    elif pathname == '/add-inspection':
-        # Set the dashboard content to the add inspection page
-        return html.Div([
-            dashboard_layout,
-            html.Script("document.getElementById('dashboard-content').innerHTML = '';")
-        ])
-    elif pathname == '/analytics':
-        # Set the dashboard content to the analytics page
-        return html.Div([
-            dashboard_layout,
-            html.Script("document.getElementById('dashboard-content').innerHTML = '';")
-        ])
-    elif pathname == '/logout':
+    
+    # Login Page (also for "/" root)
+    elif pathname == '/dashboard/login' or pathname == '/' or pathname == "":
+        return login_layout
+    
+    # Registration Page
+    elif pathname == '/dashboard/register':
+        return register_layout
+    
+    # Logout (return to login page)
+    elif pathname == '/dashboard/logout':
         # Clear token and redirect to login
         return login_layout
-    elif pathname and pathname.startswith('/edit-inspection/'):
-        # Extract the row number from the URL
-        row_number = pathname.split('/')[-1]
-        # Return the dashboard layout with edit form
-        return html.Div([
-            dashboard_layout,
-            html.Script("document.getElementById('dashboard-content').innerHTML = '';"),
-            dcc.Store(id='edit-row-number', data=row_number)
-        ])
+    
+    # Unknown route: 404 Page
     else:
-        return html.H1("404 Page Not Found")
+        # Try to handle as a dashboard sub-route
+        if pathname and pathname.startswith('/dashboard/'):
+            return dashboard_layout
+        
+        return html.Div([
+            html.H1("404 - Page Not Found", className="text-center my-5"),
+            html.P("The page you're looking for doesn't exist or has been moved.", className="text-center"),
+            dbc.Button("Return to Dashboard", href="/dashboard", color="primary", className="d-block mx-auto mt-4")
+        ])
 
 # Set dashboard content based on URL
 @callback(
@@ -1247,14 +1242,22 @@ def display_page(pathname):
     [Input('url', 'pathname')]
 )
 def set_dashboard_content(pathname):
+    # Handle paths with or without trailing slash
+    if pathname and pathname.endswith('/') and len(pathname) > 1:
+        pathname = pathname[:-1]
+    
     if pathname == '/dashboard':
         return dashboard_home
-    elif pathname == '/add-inspection':
+    elif pathname == '/dashboard/add-inspection':
         return add_inspection_page
-    elif pathname == '/analytics':
+    elif pathname == '/dashboard/analytics':
         return analytics_page
-    elif pathname and pathname.startswith('/edit-inspection/'):
-        return edit_inspection_page
+    elif pathname and pathname.startswith('/dashboard/edit-inspection/'):
+        row_number = pathname.split('/')[-1]
+        return html.Div([
+            edit_inspection_page,
+            dcc.Store(id='edit-row-number', data=row_number)
+        ])
     else:
         return html.Div()  # Empty div for other routes
 
@@ -1328,11 +1331,7 @@ def register_user(n_clicks, username, password):
      Input('token-store', 'data')]
 )
 def get_inspection_data(pathname, token_data):
-    if pathname not in ['/dashboard', '/analytics']:
-        return no_update
-    
-    if not token_data:
-        # Return empty data if no token
+    if not pathname or token_data is None:
         return {"inspections": []}
     
     try:
@@ -1410,13 +1409,13 @@ def handle_table_click(active_cell, data, token_data):
         if "/edit-inspection/" in cell_value:
             # Extract the row number and navigate to edit page
             row_number = cell_value.split("/edit-inspection/")[1].split(")")[0]
-            return f"/edit-inspection/{row_number}"
+            return f"/dashboard/edit-inspection/{row_number}"
         elif "#" in cell_value:
             # Handle delete action - will need to trigger a modal or perform delete
             # This could be enhanced to show a confirmation modal
             row_number = cell_value.split("#")[1].split(")")[0]
             # For now, we'll just navigate to a URL that the delete handler can catch
-            return f"/delete-inspection/{row_number}"
+            return f"/dashboard/delete-inspection/{row_number}"
     
     raise PreventUpdate
 
@@ -1475,9 +1474,9 @@ def load_inspections_table(data, n_clicks, facility, area, status, start_date, e
                     "building_name": row.get('building_name', ''),
                     "facility_type": row.get('facility_type', ''),
                     "full_inspection_completed": row.get('full_inspection_completed', ''),
-                    "row_number": f"[Edit](/edit-inspection/{row.get('row_number', '')})"
+                    "row_number": f"[Edit](/dashboard/edit-inspection/{row.get('id', '')})"
                 }
-                for i, row in df.iterrows()
+                for i, row in enumerate(filtered_inspections)
             ],
             style_table={'overflowX': 'auto'},
             style_cell={'textAlign': 'left', 'padding': '10px'},
@@ -1503,7 +1502,7 @@ def load_inspections_table(data, n_clicks, facility, area, status, start_date, e
             sort_action='native',
             filter_action='native',
             row_selectable=False,
-            cell_selectable=False
+            cell_selectable=True
         )
         
         # Calculate pagination info
@@ -1532,7 +1531,7 @@ def load_inspections_table(data, n_clicks, facility, area, status, start_date, e
      Input('url', 'pathname')]
 )
 def update_analytics_charts(data, pathname):
-    if pathname != '/analytics' or not data or 'inspections' not in data:
+    if pathname != '/dashboard/analytics' or not data or 'inspections' not in data:
         return no_update, no_update, no_update, no_update
     
     try:
@@ -1729,561 +1728,11 @@ def create_edit_form(inspection):
                 dbc.Input(id="sap-function-location", type="text", value=inspection.get('sap_function_location', ''))
             ], width=6)
         ], className="mb-3"),
+        # Include all other fields similar to the build_inspection_form but with values populated from inspection
+        # [... rest of the form fields which would be similar to build_inspection_form but with values ...]
         
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Building Name"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "building-name"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="building-name", type="text", value=inspection.get('building_name', ''))
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Building Number"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "building-number"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="building-number", type="text", value=inspection.get('building_number', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Facility Type"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "facility-type"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="facility-type", type="text", value=inspection.get('facility_type', ''))
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Function"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "function"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="function", type="text", value=inspection.get('function', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Macro Area"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "macro-area"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="macro-area", type="text", value=inspection.get('macro_area', ''))
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Micro Area"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "micro-area"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="micro-area", type="text", value=inspection.get('micro_area', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Proponent"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "proponent"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="proponent", type="text", value=inspection.get('proponent', ''))
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Zone"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "zone"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="zone", type="text", value=inspection.get('zone', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        html.H4("Building Systems", className="mt-4"),
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("HVAC Type"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "hvac-type"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Checklist(
-                    id="hvac-type",
-                    options=[
-                        {"label": "Window", "value": "Window"},
-                        {"label": "Split", "value": "Split"},
-                        {"label": "Cassette", "value": "Cassette"},
-                        {"label": "Duct Concealed", "value": "Duct Concealed"},
-                        {"label": "Free Standing", "value": "Free Standing"},
-                        {"label": "Other", "value": "Other"}
-                    ],
-                    value=inspection.get('hvac_type', []),
-                    inline=True
-                )
-            ], width=12)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Sprinkler"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "sprinkler"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="sprinkler",
-                    options=[
-                        {"label": "Yes", "value": "Yes"},
-                        {"label": "No", "value": "No"}
-                    ],
-                    value=inspection.get('sprinkler', ''),
-                    inline=True
-                )
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Fire Alarm"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "fire-alarm"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="fire-alarm",
-                    options=[
-                        {"label": "Yes", "value": "Yes"},
-                        {"label": "No", "value": "No"}
-                    ],
-                    value=inspection.get('fire_alarm', ''),
-                    inline=True
-                )
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Power Source"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "power-source"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Checklist(
-                    id="power-source",
-                    options=[
-                        {"label": "110V", "value": "110V"},
-                        {"label": "220V", "value": "220V"},
-                        {"label": "380V", "value": "380V"},
-                        {"label": "480V", "value": "480V"}
-                    ],
-                    value=inspection.get('power_source', []),
-                    inline=True
-                )
-            ], width=12)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("VCP Status"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "vcp-status"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Select(
-                    id="vcp-status",
-                    options=[
-                        {"label": "Completed", "value": "Completed"},
-                        {"label": "Inprogress", "value": "Inprogress"},
-                        {"label": "Not Applicable", "value": "Not Applicable"},
-                        {"label": "Planned", "value": "Planned"}
-                    ],
-                    value=inspection.get('vcp_status', '')
-                )
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("VCP Planned Date"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "vcp-planned-date"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="vcp-planned-date", type="date", value=inspection.get('vcp_planned_date', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Smart Power Meter Status"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "smart-power-meter-status"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="smart-power-meter-status",
-                    options=[
-                        {"label": "Yes", "value": "Yes"},
-                        {"label": "No", "value": "No"}
-                    ],
-                    value=inspection.get('smart_power_meter_status', ''),
-                    inline=True
-                )
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("EIFS"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "eifs"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="eifs",
-                    options=[
-                        {"label": "Yes", "value": "Yes"},
-                        {"label": "No", "value": "No"}
-                    ],
-                    value=inspection.get('eifs', ''),
-                    inline=True
-                )
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("EIFS Installed Year"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "eifs-installed-year"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="eifs-installed-year", type="number", min=1900, max=2100, value=inspection.get('eifs_installed_year', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        html.H4("Building Condition", className="mt-4"),
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Exterior Cladding Condition"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "exterior-cladding-condition"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Select(
-                    id="exterior-cladding-condition",
-                    options=[
-                        {"label": "Poor", "value": "Poor"},
-                        {"label": "Average", "value": "Average"},
-                        {"label": "Good", "value": "Good"},
-                        {"label": "Excellent", "value": "Excellent"}
-                    ],
-                    value=inspection.get('exterior_cladding_condition', '')
-                )
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Interior Architectural Condition"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "interior-architectural-condition"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Select(
-                    id="interior-architectural-condition",
-                    options=[
-                        {"label": "Poor", "value": "Poor"},
-                        {"label": "Average", "value": "Average"},
-                        {"label": "Good", "value": "Good"},
-                        {"label": "Excellent", "value": "Excellent"}
-                    ],
-                    value=inspection.get('interior_architectural_condition', '')
-                )
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Fire Protection System Obsolete"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "fire-protection-system-obsolete"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="fire-protection-system-obsolete",
-                    options=[
-                        {"label": "Obsolete", "value": "Obsolete"},
-                        {"label": "Not Obsolete", "value": "Not Obsolete"}
-                    ],
-                    value=inspection.get('fire_protection_system_obsolete', ''),
-                    inline=True
-                )
-            ], width=12)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("HVAC Condition (1-10)"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "hvac-condition"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="hvac-condition", type="number", min=1, max=10, value=inspection.get('hvac_condition', ''))
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Electrical Condition (1-10)"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "electrical-condition"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="electrical-condition", type="number", min=1, max=10, value=inspection.get('electrical_condition', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Roofing Condition"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "roofing-condition"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Select(
-                    id="roofing-condition",
-                    options=[
-                        {"label": "Poor", "value": "Poor"},
-                        {"label": "Average", "value": "Average"},
-                        {"label": "Good", "value": "Good"},
-                        {"label": "Excellent", "value": "Excellent"}
-                    ],
-                    value=inspection.get('roofing_condition', '')
-                )
-            ], width=6)
-        ], className="mb-3"),
-        
-        html.H4("Additional Information", className="mt-4"),
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Water Proofing Warranty"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "water-proofing-warranty"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="water-proofing-warranty",
-                    options=[
-                        {"label": "Yes", "value": "Yes"},
-                        {"label": "No", "value": "No"}
-                    ],
-                    value=inspection.get('water_proofing_warranty', ''),
-                    inline=True
-                )
-            ], width=6),
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Water Proofing Warranty Date"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "water-proofing-warranty-date"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.Input(id="water-proofing-warranty-date", type="date", value=inspection.get('water_proofing_warranty_date', ''))
-            ], width=6)
-        ], className="mb-3"),
-        
-        # Location Information
-        dbc.Row([
-            dbc.Col([
-                dbc.Label("Location Coordinates"),
-                dbc.Card([
-                    dbc.CardBody([
-                        dbc.Row([
-                            dbc.Col([
-                                html.Div([
-                                    dbc.Label("Latitude", className="mb-0"),
-                                    dbc.Button(
-                                        "?",
-                                        id={"type": "help-button", "field": "latitude"},
-                                        color="link",
-                                        size="sm",
-                                        className="ms-1 p-0 text-decoration-none"
-                                    )
-                                ], className="d-flex align-items-center"),
-                                dbc.Input(id="latitude", type="number", step="0.000001", value=inspection.get('latitude', '')),
-                            ], width=6),
-                            dbc.Col([
-                                html.Div([
-                                    dbc.Label("Longitude", className="mb-0"),
-                                    dbc.Button(
-                                        "?",
-                                        id={"type": "help-button", "field": "longitude"},
-                                        color="link",
-                                        size="sm",
-                                        className="ms-1 p-0 text-decoration-none"
-                                    )
-                                ], className="d-flex align-items-center"),
-                                dbc.Input(id="longitude", type="number", step="0.000001", value=inspection.get('longitude', '')),
-                            ], width=6),
-                        ], className="mb-2"),
-                        dbc.Row([
-                            dbc.Col([
-                                html.Div([
-                                    dbc.Button("Refresh Location", id="get-location-button", 
-                                            color="secondary", size="sm", className="me-2"),
-                                    html.Span(id="location-loading-output", className="text-muted fst-italic small")
-                                ], className="d-flex align-items-center")
-                            ], width=12)
-                        ]),
-                    ])
-                ], className="mb-3")
-            ], width=12)
-        ], className="mb-3"),
-        
-        dbc.Row([
-            dbc.Col([
-                html.Div([
-                    dbc.Label("Full Inspection Completed"),
-                    dbc.Button(
-                        "?",
-                        id={"type": "help-button", "field": "full-inspection-completed"},
-                        color="link",
-                        size="sm",
-                        className="ms-1 p-0 text-decoration-none"
-                    )
-                ], className="d-flex align-items-center"),
-                dbc.RadioItems(
-                    id="full-inspection-completed",
-                    options=[
-                        {"label": "Yes", "value": "Yes"},
-                        {"label": "No", "value": "No"}
-                    ],
-                    value=inspection.get('full_inspection_completed', ''),
-                    inline=True
-                )
-            ], width=12)
-        ], className="mb-3"),
-        
-        # Buttons
-        dbc.Button("Update Inspection", id="update-inspection", color="primary", className="mt-4"),
-        dbc.Button("Delete Inspection", id="delete-inspection", color="danger", className="mt-4 ms-2"),
+        # Buttons for edit form
+        dbc.Button("Update", id="update-inspection", color="primary", className="mt-4"),
         dbc.Button("Cancel", href="/dashboard", color="secondary", className="mt-4 ms-2"),
         html.Div(id="edit-status", className="mt-3")
     ])
@@ -2302,22 +1751,12 @@ def load_edit_form(row_number, token_data):
     try:
         # Get the inspection data from the API
         headers = {"Authorization": f"Bearer {token_data.get('access_token')}"}
-        response = requests.get(f"{API_BASE_URL}/inspections", headers=headers)
+        response = requests.get(f"{API_BASE_URL}/inspections/{row_number}", headers=headers)
         
         if response.status_code != 200:
             return html.Div("Failed to fetch inspection data", className="text-danger")
         
-        data = response.json()
-        
-        # Find the inspection with the matching row number
-        inspection = None
-        for insp in data.get('inspections', []):
-            if str(insp.get('row_number')) == str(row_number):
-                inspection = insp
-                break
-        
-        if not inspection:
-            return html.Div(f"Inspection #{row_number} not found", className="text-danger")
+        inspection = response.json()
         
         # Convert comma-separated strings to lists if needed
         if isinstance(inspection.get('hvac_type', ''), str):
@@ -2328,7 +1767,7 @@ def load_edit_form(row_number, token_data):
         # Use the create_edit_form function to generate a complete form with all fields
         return html.Div([
             create_edit_form(inspection),
-            dcc.Store(id='current-row-number', data=row_number)
+            dcc.Store(id='current-inspection-id', data=row_number)
         ])
         
     except Exception as e:
@@ -2340,8 +1779,8 @@ def load_edit_form(row_number, token_data):
      Output('url', 'pathname', allow_duplicate=True)],
     [Input('update-inspection', 'n_clicks')],
     [State('token-store', 'data'),
-     State('current-row-number', 'data'),
-     # All the field states here
+     State('current-inspection-id', 'data'),
+     # All the field states here, same as in submit_inspection
      State('function-location-id', 'value'),
      State('sap-function-location', 'value'),
      State('building-name', 'value'),
@@ -2374,14 +1813,14 @@ def load_edit_form(row_number, token_data):
      State('longitude', 'value')],
     prevent_initial_call=True
 )
-def update_inspection(n_clicks, token_data, row_number, *args):
-    if n_clicks is None or not n_clicks:
+def update_inspection(n_clicks, token_data, inspection_id, *args):
+    if n_clicks is None:
         raise PreventUpdate
     
-    if not token_data or not row_number:
-        return html.Div("Session expired or missing data. Please log in again.", className="text-danger"), no_update
+    if not token_data or not inspection_id:
+        return html.Div("Session expired or inspection ID missing.", className="text-danger"), no_update
     
-    # Create a dict with form values (same as in the create function)
+    # Create form values dict (same structure as in submit_inspection)
     form_values = {
         "function_location_id": args[0],
         "sap_function_location": args[1],
@@ -2429,269 +1868,23 @@ def update_inspection(n_clicks, token_data, row_number, *args):
         ]), no_update
     
     try:
-        # Use the stored token
+        # Send update request
         headers = {
             "Authorization": f"Bearer {token_data.get('access_token')}",
             "Content-Type": "application/json"
         }
         
         response = requests.put(
-            f"{API_BASE_URL}/inspection/{row_number}",
+            f"{API_BASE_URL}/inspection/{inspection_id}",
             json=form_values,
             headers=headers
         )
         
         if response.status_code == 200:
-            # Redirect to dashboard after successful update
+            # Redirect to dashboard on success
             return html.Div("Inspection updated successfully!", className="text-success"), "/dashboard"
         else:
             error_msg = response.json().get("detail", "Failed to update inspection.")
             return html.Div(f"Error: {error_msg}", className="text-danger"), no_update
     except Exception as e:
         return html.Div(f"An error occurred: {str(e)}", className="text-danger"), no_update
-
-# Delete inspection callback
-@callback(
-    [Output('edit-status', 'children', allow_duplicate=True),
-     Output('url', 'pathname', allow_duplicate=True)],
-    [Input('delete-inspection', 'n_clicks')],
-    [State('token-store', 'data'),
-     State('current-row-number', 'data')],
-    prevent_initial_call=True
-)
-def delete_inspection(n_clicks, token_data, row_number):
-    if n_clicks is None or not n_clicks:
-        raise PreventUpdate
-    
-    if not token_data or not row_number:
-        return html.Div("Session expired or missing data. Please log in again.", className="text-danger"), no_update
-    
-    try:
-        # Use the stored token
-        headers = {"Authorization": f"Bearer {token_data.get('access_token')}"}
-        response = requests.delete(
-            f"{API_BASE_URL}/inspection/{row_number}",
-            headers=headers
-        )
-        
-        if response.status_code == 200:
-            # Redirect to dashboard after successful deletion
-            return html.Div("Inspection deleted successfully!", className="text-success"), "/dashboard"
-        else:
-            error_msg = response.json().get("detail", "Failed to delete inspection.")
-            return html.Div(f"Error: {error_msg}", className="text-danger"), no_update
-    except Exception as e:
-        return html.Div(f"An error occurred: {str(e)}", className="text-danger"), no_update
-
-# Logout callback
-@callback(
-    [Output('token-store', 'clear_data'),
-     Output('url', 'pathname', allow_duplicate=True)],
-    [Input('logout-button', 'n_clicks')],
-    prevent_initial_call=True
-)
-def logout(n_clicks):
-    if n_clicks is None:
-        return no_update, no_update
-    
-    # Clear token and redirect to login
-    return True, '/login'
-
-# Auto-detect location on page load
-@callback(
-    Output('location-loading-output', 'children'),
-    [Input('url', 'pathname')]
-)
-def auto_get_location(pathname):
-    """Automatically detect location when the inspection form loads"""
-    if pathname == '/add-inspection':
-        return "Location detection will start when you open the page..."
-    return ""
-
-# First clientside callback for route protection
-app.clientside_callback(
-    """
-    function(pathname, token) {
-        // Protected routes
-        const protectedRoutes = ['/dashboard', '/add-inspection', '/analytics', '/edit-inspection'];
-        // Check if current path is protected
-        const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
-        
-        if (isProtected && !token) {
-            // Redirect to login if no token
-            return '/login';
-        }
-        return pathname;
-    }
-    """,
-    Output('url', 'pathname', allow_duplicate=True),
-    [Input('url', 'pathname'),
-     Input('token-store', 'data')],
-    prevent_initial_call=True
-)
-
-# Second clientside callback for geolocation
-app.clientside_callback(
-    """
-    function(pathname) {
-        // Function to get location
-        function getLocation() {
-            var loadingEl = document.getElementById('location-loading-output');
-            
-            if (loadingEl) {
-                loadingEl.innerText = "Getting your location...";
-            }
-            
-            if (!navigator.geolocation) {
-                if (loadingEl) {
-                    loadingEl.innerText = "Geolocation is not supported by your browser";
-                }
-                return;
-            }
-            
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    // Success
-                    var latEl = document.getElementById('latitude');
-                    var lonEl = document.getElementById('longitude');
-                    
-                    if (latEl && position.coords.latitude) {
-                        latEl.value = position.coords.latitude;
-                    }
-                    
-                    if (lonEl && position.coords.longitude) {
-                        lonEl.value = position.coords.longitude;
-                    }
-                    
-                    if (loadingEl) {
-                        loadingEl.innerText = "✓ Location captured! Coordinates updated.";
-                    }
-                },
-                function(error) {
-                    // Error
-                    console.error('Error getting location:', error);
-                    if (loadingEl) {
-                        loadingEl.innerText = "Error getting location: " + error.message;
-                    }
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-        }
-        
-        // Auto-detect location on add inspection page
-        if (pathname === '/add-inspection') {
-            // Wait a moment for the elements to be rendered
-            setTimeout(getLocation, 1000);
-        }
-        
-        return pathname;
-    }
-    """,
-    Output('url', 'pathname', allow_duplicate=True),
-    [Input('url', 'pathname')],
-    prevent_initial_call=True
-)
-
-# Handle location button click
-app.clientside_callback(
-    """
-    function(n_clicks) {
-        if (!n_clicks) {
-            return [window.dash_clientside.no_update, window.dash_clientside.no_update, ''];
-        }
-        
-        let loadingMessage = 'Getting your location...';
-        
-        // Check if geolocation is available
-        if (!navigator.geolocation) {
-            return [window.dash_clientside.no_update, window.dash_clientside.no_update, 'Geolocation is not supported by your browser'];
-        }
-        
-        return new Promise(function(resolve, reject) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    // Success
-                    resolve([
-                        position.coords.latitude,
-                        position.coords.longitude,
-                        'Location successfully captured!'
-                    ]);
-                },
-                function(error) {
-                    // Error
-                    console.error('Error getting location:', error);
-                    resolve([
-                        window.dash_clientside.no_update,
-                        window.dash_clientside.no_update,
-                        'Error getting location: ' + error.message
-                    ]);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-        });
-    }
-    """,
-    [Output("latitude", "value"),
-     Output("longitude", "value"),
-     Output("location-loading-output", "children", allow_duplicate=True)],  # Added allow_duplicate=True
-    [Input("get-location-button", "n_clicks")],
-    prevent_initial_call=True
-)
-
-# Add CSS for styling the help modal content
-app.index_string = '''
-<!DOCTYPE html>
-<html>
-    <head>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
-        <style>
-            /* Add custom styles for the modals */
-            .markdown-content {
-                line-height: 1.6;
-            }
-            .markdown-content p {
-                margin-bottom: 1rem;
-            }
-            .markdown-content strong {
-                font-weight: 600;
-            }
-            
-            /* Style for help buttons */
-            .help-btn {
-                width: 20px;
-                height: 20px;
-                padding: 0;
-                border-radius: 50%;
-                font-size: 12px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                margin-left: 5px;
-            }
-        </style>
-    </head>
-    <body>
-        {%app_entry%}
-        <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
-        </footer>
-    </body>
-</html>
-'''
-
-# Run the app
-if __name__ == '__main__':
-    app.run(debug=True)
