@@ -223,7 +223,7 @@ def delete_inspection_endpoint(
 # ========== DASHBOARD (DASH APP) SPA CATCH-ALL ===========
 # This lets your Dash SPA handle all routes under /dashboard/
 
-@app.get("/dashboard/{full_path:path}", response_class=HTMLResponse)
+# @app.get("/dashboard/{full_path:path}", response_class=HTMLResponse)
 @app.get("/dashboard", response_class=HTMLResponse)
 def dash_catch_all(full_path: str = ""):
     return HTMLResponse(dash_app.index_string)
