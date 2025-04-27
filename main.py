@@ -15,8 +15,8 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 
 # ENV vars
-DATABASE_URL = os.getenv("DATABASE_URL", "your_neon_postgres_url")
-SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key")
+DATABASE_URL = os.getenv("DATABASE_URL")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
