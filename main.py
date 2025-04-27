@@ -1,6 +1,8 @@
 import logging
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
+from starlette.middleware.wsgi import WSGIMiddleware
+from dashboard.app import app as dash_app
 
 # Add these lines at the top of your main.py file
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -331,3 +333,6 @@ def delete_inspection_endpoint(
     except Exception as e:
         print("DATABASE ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+# Mount Dash at /dashboard
+app.mount("/dashboard", WSGIMiddleware(dash_app.server))
