@@ -7,8 +7,12 @@ from datetime import datetime
 import pandas as pd
 import os
 from dash.exceptions import PreventUpdate
-from visualization import (create_condition_chart, create_facility_type_chart, 
-                          create_inspection_status_chart, create_zone_map)
+from dashboard.visualization import (
+    create_condition_chart,
+    create_facility_type_chart,
+    create_inspection_status_chart,
+    create_zone_map,
+)
 API_BASE_URL = os.getenv("API_BASE_URL", "")
 
 
