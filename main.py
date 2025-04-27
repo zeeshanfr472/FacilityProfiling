@@ -221,7 +221,17 @@ def delete_inspection_endpoint(
     return {"status": "deleted", "id": inspection_id}
 
 
+# Set up WSGI middleware to mount the Dash app at the /dashboard path
 app.mount("/dashboard", WSGIMiddleware(dash_app.server))
+
+# Add a catch-all route to handle all routes not explicitly defined
+@app.get("/{path:path}")
+async def catch_all(path: str):
+    # If the path starts with 'dashboard', redirect to the Dash app
+    if path.startswith("dashboard"):
+        return RedirectResponse(url=f"/{path}")
+    # Otherwise, redirect to the root which will then redirect to dashboard
+    return RedirectResponse(url="/")
 
 # ========================
 # END OF main.py
