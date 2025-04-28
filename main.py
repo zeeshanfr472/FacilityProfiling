@@ -243,5 +243,4 @@ def delete_inspection(inspection_id: int, db: Session = Depends(get_db), current
     return {"ok": True}
 
 
-# This mounts everything in /static at the root URL
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
