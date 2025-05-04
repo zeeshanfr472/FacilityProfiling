@@ -44,6 +44,8 @@ class User(Base):
 class Inspection(Base):
     __tablename__ = "inspections"
     id = Column(Integer, primary_key=True, index=True)
+    inspector_name = Column(String)  # NEW FIELD
+    badge_number = Column(String)    # NEW FIELD
     function_location_id = Column(String)
     sap_function_location = Column(String)
     building_name = Column(String)
@@ -89,6 +91,8 @@ class UserResponse(BaseModel):
         orm_mode = True
 
 class InspectionBase(BaseModel):
+    inspector_name: str              # NEW FIELD
+    badge_number: str               # NEW FIELD
     function_location_id: str
     sap_function_location: str
     building_name: str
