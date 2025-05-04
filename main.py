@@ -176,11 +176,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 app = FastAPI()
 
+# Updated CORS configuration - be more specific with the origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://zeeshanfr472.github.io",  # Your GitHub Pages domain
+        "http://localhost:3000",           # For local development
+        "*"                                # Allow all (you can remove this in production)
+    ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Added OPTIONS here
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -246,5 +251,16 @@ def delete_inspection(inspection_id: int, db: Session = Depends(get_db), current
     db.commit()
     return {"ok": True}
 
+# Add a health check endpoint
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
-
+# Add a debug endpoint to see the current state
+@app.get("/debug")
+def debug_info():
+    return {
+        "database_url_set": bool(DATABASE_URL),
+        "secret_key_set": bool(SECRET_KEY),
+        "algorithm": ALGORITHM
+    }
